@@ -1,0 +1,505 @@
+''LoadDataGridView()  
+''Dim str As String =C("txtFileName").Text
+Dim excelFilewithPath As String =C("txtFileName").Text
+
+Dim excel As New XLSXExport(excelFilewithPath)
+Dim sheetName As String=excel.SheetNames(0)
+'删除前面4行
+excel.DeleteRow(sheetName,1,4)
+
+Dim dtExcel As DataTable=excel.ReadWorkSheetToDataTable(sheetName)
+
+
+C("Grid2").DataSource = Nothing  
+C("Grid2").DataSource = dtExcel  
+C("Grid2").AllowUserToAddRows = False  
+
+Dim dataTable As New Data.DataTable()  
+
+Dim  connectionString As String = "Data Source=172.20.1.25;Connection Timeout=60000; Initial Catalog=MFG_ReportSystem_PRD;User ID=MFG_ReportSystem;Password=U2!5J9^45H35|N@YRCS2;pooling=true"  
+Dim query As String = "SELECT * FROM TestVB" 
+' 创建一个新的SqlConnection对象  
+Using connection As New System.Data.SqlClient.SqlConnection(connectionString)  
+	Try  
+		' 打开连接  
+		connection.Open()  
+ 
+		' 创建一个SqlCommand对象  
+		Using command As New System.Data.SqlClient.SqlCommand(query, connection)  
+ 
+			' 创建一个SqlDataAdapter对象来填充DataSet  
+			Using adapter As New System.Data.SqlClient.SqlDataAdapter(command)  
+ 
+				adapter.Fill(dataTable) ' 填充DataTable  
+ 
+			End Using ' SqlDataAdapter  
+ 
+		End Using ' SqlCommand  
+ 
+	Catch ex As Exception  
+		' 异常处理  
+		msgbox("Error: " & ex.Message)  
+	End Try  
+End Using ' SqlConnection  
+
+'Dim found As Boolean = False
+
+C("Grid2").DataSource = Nothing  
+C("Grid2").DataSource = dtExcel  
+C("Grid2").AllowUserToAddRows = False  
+
+If dtExcel.Columns.Contains("PART 1") Then  
+	dtExcel.Columns("PART 1").ColumnName = "PART1" 
+	 
+End If 
+If  dtExcel.Columns.Contains("PART 2")  Then
+	dtExcel.Columns("PART 2").ColumnName = "PART2"  
+End If 
+	 
+	 
+	 
+Dim dtNew As DataTable = dtExcel.Copy() ' 复制结构 和数据  
+	 
+'' 遍历DataTable中的每一行 
+'For Each row As DataRow In dtExcel.Rows 
+'	' 如果已经找到包含"Part1"的行，则将之后的行添加到newDataTable中 
+'	If found Then 
+'		newDataTable.ImportRow(row) 
+'	Else 
+'		' 遍历当前行的每一列 
+'		For Each col As DataColumn In dtExcel.Columns 
+'			' 检查当前列的值是否为"Part1" 
+'			If row(col).ToString() = "PART1" Then 
+'				newDataTable.ImportRow(row) 
+'				found = True 
+'				' 退出内层循环，因为我们已经找到了包含"Part1"的行 
+'				Exit For 
+'			End If 
+'		Next 
+'	End If 
+'Next 
+	 
+	 
+C("Grid2").DataSource = Nothing  
+C("Grid2").DataSource = dtExcel  
+C("Grid2").AllowUserToAddRows = False  
+	 
+	 
+'If newDataTable Is Nothing OrElse newDataTable.Rows.Count = 0 Then 
+'	msgbox("DataTable 为空或没有行。") 
+'	Return 
+'End If 
+	 
+'' 创建一个新的 DataTable  
+'Dim dtNew As New DataTable() 
+	 
+'' 遍历第一行来创建新列 
+'Dim firstRow As DataRow = newDataTable.Rows(0) 
+'For Each item As Object In firstRow.ItemArray 
+'	Dim columnName As String = item.ToString().Trim() 
+'	' 添加新列，这里假设所有列都是字符串类型 
+'	' 如果列名可能为空或重复，您可能需要添加一些额外的逻辑来处理这些情况 
+'	dtNew.Columns.Add(columnName, GetType(String)) 
+'Next 
+	 
+'' 遍历除了第一行以外的所有行，并将数据复制到新表中 
+'For rowIndex As Integer = 1 To newDataTable.Rows.Count - 1 
+'	Dim sourceRow As DataRow = newDataTable.Rows(rowIndex) 
+'	Dim newRow As DataRow = dtNew.NewRow() 
+	 
+'	' 遍历源行的每个单元格，并将数据添加到新行中 
+'	' 注意：这里我们假设源行的数据与新表的列是一一对应的 
+'	For columnIndex As Integer = 0 To sourceRow.ItemArray.Length - 1 
+'		newRow(columnIndex) = sourceRow(columnIndex).ToString() ' 将数据转换为字符串，或者根据需要保留原始类型 
+'	Next 
+	 
+'	dtNew.Rows.Add(newRow) 
+'Next 
+	 
+	 
+	 
+''到时需要保存这个Excel 
+Dim dtNewExcel As New DataTable() 
+dtNewExcel.Columns.Add("PART1", GetType(String)) 
+dtNewExcel.Columns.Add("PART2", GetType(String)) 
+dtNewExcel.Columns.Add("VOLUME", GetType(String)) 
+dtNewExcel.Columns.Add("FASTENER REMARKS", GetType(String)) 
+dtNewExcel.Columns.Add("RESULTS", GetType(String)) 
+dtNewExcel.Columns.Add("STATE", GetType(String)) 
+	 
+''用来存 Part1 或者Part2 找的 数据 
+dtNewExcel.Columns.Add("PART1ByRows", GetType(String)) 
+dtNewExcel.Columns.Add("PART2ByRows", GetType(String)) 
+	 
+	 
+dtNewExcel.Columns.Add("PART1ByColMin", GetType(String)) 
+dtNewExcel.Columns.Add("PART1ByColMax", GetType(String)) 
+	 
+dtNewExcel.Columns.Add("PART2ByColMin", GetType(String)) 
+dtNewExcel.Columns.Add("PART2ByColMax", GetType(String)) 
+	 
+''存区间值 
+dtNewExcel.Columns.Add("MAX", GetType(String)) 
+dtNewExcel.Columns.Add("MIN", GetType(String)) 
+	 
+	 
+	 
+For Each row1 As DataRow In dtNew.Rows 
+	' 遍历第二个 DataTable 的每一行来寻找匹配项 
+	Dim foundMatch As Boolean = False 
+	 
+	Dim rowNew As DataRow = dtNewExcel.NewRow() 
+	 
+	rowNew("PART1") = row1("PART1").ToString() 
+	rowNew("PART2") = row1("PART2").ToString() 
+	rowNew("VOLUME") = row1("VOLUME").ToString()  
+	Dim Part1 As String = row1("PART1").ToString() 
+	Dim Part2 As String = row1("PART2").ToString() 
+	 
+	For Each row2 As DataRow In dataTable.Rows 
+		' 对比两个 DataRow 中 "CompareColumn" 列的值 
+ 
+		Dim Component As String = row2("Component").ToString() 
+		Dim firstChar As Char = Component.Substring(1, 1) 
+		Dim lastChar As Char = Component.Substring(Component.Length - 1, 1) 
+ 
+		''先定义 rowindex 和colindex 
+ 
+		Dim rowindex As Integer = -1 
+		Dim colindex As Integer = -1 
+ 
+		'判断有几个*号，如果有多个*号 就用循环，不用这种写法 
+		Dim starCount As Integer = Len(Component) - Len(Replace(Component, "*", "")) 
+ 
+		If starCount = 3 Then 
+			Dim parts() As String = Component.Split({"*"C}, StringSplitOptions.RemoveEmptyEntries) 
+			Dim gasl As String = parts(0) 
+			Dim ePart As String = parts(1) 
+			If Part1.Contains(gasl) And Part2.Contains(ePart) Then 
+				rowNew("PART1ByRows") = Component 
+			End If 
+ 
+			''如果part2 能在数据库找到，先记录下来是哪个行 
+			If Part2.Contains(gasl) And Part2.Contains(ePart) Then 
+				rowNew("PART2ByRows") = Component 
+			End If  
+ 
+			'需要判断 第一个是否为* 最后一个是否为* 或者 最后一个为*号，或者 前后都有*号,前后都有*的话就使用包含  
+		ElseIf firstChar = "*" And lastChar = "*" Then 
+			''如果part1 能在数据库找到，先记录下来是哪个行 
+			If Part1.Contains(Component.Replace("*", "")) Then 
+				rowNew("PART1ByRows") = Component 
+			End If 
+ 
+			''如果part2 能在数据库找到，先记录下来是哪个行 
+			If Part2.Contains(Component.Replace("*", "")) Then 
+				rowNew("PART2ByRows") = Component 
+			End If 
+			''如果第一个为 *的时候 使用后面的字符模糊查找数据 
+		ElseIf firstChar = "*" Then 
+			'Excel取出来的字符长度必须要比 数据库查出来的要长 
+			If Part1.Length > Component.Replace("*", "").Length Then 
+				'如果是前面为 * 则代表是以 Component为结束 
+				If Part1.Substring(Part1.Length - Component.Replace("*", "").Length, Component.Replace("*", "").Length) = Component.Replace("*", "") Then 
+					rowNew("PART1ByRows") = Component 
+				End If 
+			End If 
+ 
+ 
+			If Part2.Length > Component.Replace("*", "").Length Then 
+				''如果part2 能在数据库找到，先记录下来是哪个行 
+				If Part2.Substring(Part2.Length - Component.Replace("*", "").Length, Component.Replace("*", "").Length) = Component.Replace("*", "") Then 
+					rowNew("PART2ByRows") = Component 
+				End If 
+ 
+			End If 
+		ElseIf lastChar = "*" Then 
+			'Excel取出来的字符长度必须要比 数据库查出来的要长 
+			'如果是后面为 * 则代表是以 Component为开头 
+			If Part1.Length > Component.Replace("*", "").Length Then 
+ 
+				If Part1.Substring(0, Component.Replace("*", "").Length) = Component.Replace("*", "") Then 
+					rowNew("PART1ByRows") = Component 
+				End If 
+			End If 
+			If Part2.Length > Component.Replace("*", "").Length Then 
+				''如果part2 能在数据库找到，先记录下来是哪个行 
+				If Part2.Substring(0, Component.Replace("*", "").Length) = Component.Replace("*", "") Then 
+					rowNew("PART2ByRows") = Component 
+				End If 
+ 
+			End If 
+		End If 
+ 
+ 
+	Next 
+	 
+	''行已经匹配完成了，目前去找列 
+	For Each col2 As DataColumn In dataTable.Columns 
+		' 对比两个 DataRow 中 "CompareColumn" 列的值 
+ 
+		''获取列名 
+		Dim ColName As String = col2.ColumnName 
+		Dim ColNameRep As String = ColName.Replace("_MIN", "").Replace("_MAX", "") 
+		Dim firstChar As Char = ColNameRep.Substring(0, 1) 
+		Dim lastChar As Char = ColNameRep.Substring(ColNameRep.Length - 1, 1) 
+ 
+		''先定义 rowindex 和colindex 
+ 
+		Dim rowindex As Integer = -1 
+		Dim colindex As Integer = -1 
+ 
+		Dim starCount As Integer = Len(ColNameRep) - Len(Replace(ColNameRep, "*", "")) 
+		If starCount = 3 Then 
+			Dim parts() As String = ColNameRep.Split({"*"C}, StringSplitOptions.RemoveEmptyEntries) 
+			Dim gasl As String = parts(0) 
+			Dim ePart As String = parts(1) 
+			''如果part1 能在数据库找到，先记录下来是哪个行 
+			If Part1.Contains(gasl) And Part2.Contains(ePart) Then 
+				If ColName.Contains("MAX") Then 
+					rowNew("PART1ByColMAX") = ColName 
+ 
+				Else 
+					rowNew("PART1ByColMin") = ColName 
+				End If 
+			End If 
+ 
+			''如果part2 能在数据库找到，先记录下来是哪个行 
+			If Part2.Contains(gasl) And Part2.Contains(ePart) Then 
+				If ColName.Contains("MAX") Then 
+					rowNew("PART2ByColMAX") = ColName 
+ 
+				Else 
+					rowNew("PART2ByColMin") = ColName 
+				End If 
+			End If 
+			'需要判断 第一个是否为* 最后一个是否为* 或者 最后一个为*号，或者 前后都有*号,前后都有*的话就使用包含  
+		ElseIf firstChar = "*" And lastChar = "*" Then 
+			''如果part1 能在数据库找到，先记录下来是哪个行 
+			If Part1.Contains(ColNameRep.Replace("*", "")) Then 
+				If ColName.Contains("MAX") Then 
+					rowNew("PART1ByColMAX") = ColName 
+ 
+				Else 
+					rowNew("PART1ByColMin") = ColName 
+				End If 
+			End If 
+ 
+			''如果part2 能在数据库找到，先记录下来是哪个行 
+			If Part2.Contains(ColNameRep.Replace("*", "")) Then 
+				If ColName.Contains("MAX") Then 
+					rowNew("PART2ByColMAX") = ColName 
+ 
+				Else 
+					rowNew("PART2ByColMin") = ColName 
+				End If 
+ 
+ 
+			End If 
+			''如果第一个为 *的时候 使用后面的字符模糊查找数据 
+		ElseIf firstChar = "*" Then 
+			'Excel取出来的字符长度必须要比 数据库查出来的要长 
+			If Part1.Length > ColNameRep.Replace("*", "").Length Then 
+				'如果是前面为 * 则代表是以 Component为结束 
+				If Part1.Substring(Part1.Length - ColNameRep.Replace("*", "").Length, ColNameRep.Replace("*", "").Length) = ColNameRep.Replace("*", "") Then 
+					If ColName.Contains("MAX") Then 
+						rowNew("PART2ByColMAX") = ColName 
+ 
+					Else 
+						rowNew("PART2ByColMin") = ColName 
+					End If 
+				End If 
+ 
+			End If 
+ 
+			If Part2.Length > ColNameRep.Replace("*", "").Length Then 
+				''如果part2 能在数据库找到，先记录下来是哪个行 
+				If Part2.Substring(0, ColNameRep.Replace("*", "").Length) = ColNameRep.Replace("*", "") Then 
+					If ColName.Contains("MAX") Then 
+						rowNew("PART2ByColMAX") = ColName 
+					Else 
+						rowNew("PART2ByColMin") = ColName 
+					End If 
+				End If 
+			End If  
+ 
+ 
+ 
+		ElseIf lastChar = "*" Then 
+			'Excel取出来的字符长度必须要比 数据库查出来的要长 
+			'如果是后面为 * 则代表是以 Component为开头 
+			If Part1.Length > ColNameRep.Replace("*", "").Length Then  
+				If Part1.Substring(0, ColNameRep.Replace("*", "").Length) = ColNameRep.Replace("*", "") Then 
+					If ColName.Contains("MAX") Then 
+						rowNew("PART2ByColMAX") = ColName 
+ 
+					Else 
+						rowNew("PART2ByColMin") = ColName 
+					End If 
+				End If 
+ 
+ 
+			End If 
+			If Part2.Length > ColNameRep.Replace("*", "").Length Then 
+				''如果part2 能在数据库找到，先记录下来是哪个行 
+				If Part2.Substring(0, ColNameRep.Replace("*", "").Length) = ColNameRep.Replace("*", "") Then 
+					If ColName.Contains("MAX") Then 
+						rowNew("PART2ByColMAX") = ColName 
+					Else 
+						rowNew("PART2ByColMin") = ColName 
+					End If 
+				End If 
+			End If  
+		End If 
+ 
+	Next 
+	 
+	 
+	''插入新行 
+	dtNewExcel.Rows.Add(rowNew) 
+Next 
+Dim i As Integer = 0 
+''循环把 MAX 和MIN的值拿出来 生成最终Excel 
+For Each row1 As DataRow In dtNewExcel.Rows 
+	 
+	Dim Part1 As String = row1("PART1ByRows").ToString() 
+	Dim Part2 As String = row1("PART2ByRows").ToString() 
+	 
+	Dim PART1ByColMin As String = row1("PART1ByColMin").ToString() 
+	Dim PART1ByColMax As String = row1("PART1ByColMax").ToString() 
+	Dim PART2ByColMin As String = row1("PART2ByColMin").ToString() 
+	Dim PART2ByColMax As String = row1("PART2ByColMax").ToString() 
+	 
+	Dim rowIndex As String = "" ' 假设我们想要获取第三行的数据（索引从0开始） 
+	Dim MAX As String = "" 
+	Dim MIN As String = "" 
+	 
+	''如果Part1 等于空，就去Part2，如果这两个都等于空就直接退出循环 
+	If String.IsNullOrWhiteSpace(Part1) = False Then 
+		rowIndex = Part1 
+	ElseIf String.IsNullOrWhiteSpace(Part2) = False Then 
+		rowIndex = Part2 
+	End If 
+	''列的值 
+	If String.IsNullOrWhiteSpace(PART1ByColMin) = False Then 
+		MIN = PART1ByColMin 
+	ElseIf String.IsNullOrWhiteSpace(PART1ByColMin) Then 
+		MIN = PART2ByColMin 
+	End If 
+	If String.IsNullOrWhiteSpace(PART1ByColMax) = False Then 
+		MAX = PART1ByColMax 
+	ElseIf String.IsNullOrWhiteSpace(PART1ByColMin) Then 
+		MAX = PART2ByColMax 
+	End If 
+	If row1("PART1").ToString() = row1("PART2").ToString() Then 
+		row1("RESULTS") = "1" 
+		row1("State") = "Failed" 
+		row1("FASTENER REMARKS") = "Duplicate" 
+	ElseIf rowIndex <> "" And MAX <> "" And MIN <> "" Then 
+		''都不等于空的时候获取MAX和Min,否则就要写入FASTENER REMARKS 和 RESULTS 
+		For Each dataRow As DataRow In dataTable.Rows 
+ 
+			If dataRow("Component").ToString() = rowIndex Then 
+				Dim Maxvalue As String = dataRow(MAX).ToString() 
+				Dim MinValue As String = dataRow(MIN).ToString() 
+ 
+				Dim maxDouble As Double 
+				Dim minDouble As Double  
+				Dim maxConverted As Boolean = Double.TryParse(Maxvalue, maxDouble) 
+				Dim minConverted As Boolean = Double.TryParse(MinValue, minDouble) 
+ 
+				If maxConverted AndAlso minConverted Then 
+					row1("MAX") = Convert.ToDouble(Maxvalue)  
+					row1("MIN") = Convert.ToDouble(MinValue)  
+					Dim VOLUME As Double = Convert.ToDouble(row1("VOLUME"))  
+ 
+					If VOLUME >Convert.ToDouble(MinValue) And VOLUME < Convert.ToDouble(Maxvalue) Then  
+						row1("RESULTS") = "0"  
+						row1("State") = "Success" 
+						row1("FASTENER REMARKS") = ""  
+					Else  
+						row1("RESULTS") = "1"  
+						row1("STATE") = "Failed" 
+						row1("FASTENER REMARKS") = "LOW THREAD ENGAGEMENT, SHOULD BE " + row1("MIN") + " TO " + row1("MAX")  
+					End If  
+				Else 
+					row1("RESULTS") = "1" 
+					row1("STATE") = "Failed" 
+					row1("FASTENER REMARKS") = "数据库中没有值" 
+				End If  
+ 
+			End If 
+		Next  
+	Else 
+		row1("RESULTS") = "1" 
+		row1("STATE") = "Failed" 
+		row1("FASTENER REMARKS") = "没有查询到数据" 
+	End If 
+Next 
+	 
+''用来存 Part1 或者Part2 找的 数据 
+'dtNewExcel.Columns.Add("PART1ByRows", GetType(String)) 
+'dtNewExcel.Columns.Add("PART2ByRows", GetType(String)) 
+	 
+	 
+'dtNewExcel.Columns.Add("PART1ByColMin", GetType(String)) 
+'dtNewExcel.Columns.Add("PART1ByColMax", GetType(String)) 
+	 
+'dtNewExcel.Columns.Add("PART2ByColMin", GetType(String)) 
+'dtNewExcel.Columns.Add("PART2ByColMax", GetType(String)) 
+	 
+RemoveCol(dtNewExcel, "PART1ByRows") 
+RemoveCol(dtNewExcel, "PART2ByRows") 
+RemoveCol(dtNewExcel, "PART1ByColMin") 
+RemoveCol(dtNewExcel, "PART1ByColMax") 
+RemoveCol(dtNewExcel, "PART2ByColMin") 
+RemoveCol(dtNewExcel, "PART2ByColMax") 
+RemoveCol(dtNewExcel, "MAX") 
+RemoveCol(dtNewExcel, "MIN") 
+	 
+	 
+	 
+	 
+Dim savePath As String=C("txtSavePath").Text  
+Dim excelName As String=DateTime.Now.ToString("yyyyMMddHHmmss")&".xlsx"  
+	 
+Dim excelNew As New XLSXExport()  
+	 
+excelNew.AddSheet(sheetName)  
+	 
+excelNew.CellValue(sheetName,1,1)=  "PART1"  
+excelNew.CellValue(sheetName,1,2)=  "PART2"  
+excelNew.CellValue(sheetName,1,3)=  "VOLUME"  
+excelNew.CellValue(sheetName,1,4)=  "FASTENER REMARKS"  
+excelNew.CellValue(sheetName,1,5)=  "RESULTS"  
+excelNew.CellValue(sheetName,1,6)=  "STATE"  
+	 
+For xx As Integer = 2  To dtNewExcel.Rows.Count +1  
+	excelNew.CellValue(sheetName,xx,1)=  dtNewExcel.Rows(xx-2)("PART1") 
+	excelNew.CellValue(sheetName,xx,2)=  dtNewExcel.Rows(xx-2)("PART2")  
+	excelNew.CellValue(sheetName,xx,3)=  dtNewExcel.Rows(xx-2)("VOLUME")  
+	excelNew.CellValue(sheetName,xx,4)=  dtNewExcel.Rows(xx-2)("FASTENER REMARKS")  
+	excelNew.CellValue(sheetName,xx,5)=  dtNewExcel.Rows(xx-2)("RESULTS") 
+	excelNew.CellValue(sheetName,xx,6)=  dtNewExcel.Rows(xx-2)("STATE")  
+	'更改颜色 
+	If 	 Convert.ToInt32(dtNewExcel.Rows(xx-2)("RESULTS") ) = 1 Then 
+		excelNew.CellBackcolor(sheetName,xx,4)=Color.Red 
+	End If  
+Next 
+	 
+'自动宽度  
+excelNew.ColumnsAutoFit(sheetName)  
+	 
+If Not System.IO.Directory.Exists(savePath)  Then  
+	' 如果文件夹不存在，则创建它 
+	System.IO.Directory.CreateDirectory(savePath) 
+End If 
+	 
+excelNew.SavetoFile(savePath & excelName, True)  
+	 
+C("Grid1").DataSource = Nothing  
+C("Grid1").DataSource = dtNewExcel  
+C("Grid1").AllowUserToAddRows = False  
+	 
+	 
+	 
